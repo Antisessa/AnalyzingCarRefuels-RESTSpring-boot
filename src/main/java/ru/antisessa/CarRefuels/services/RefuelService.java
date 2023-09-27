@@ -8,7 +8,9 @@ import ru.antisessa.CarRefuels.models.Refuel;
 import ru.antisessa.CarRefuels.repositories.CarRepository;
 import ru.antisessa.CarRefuels.repositories.RefuelRepository;
 import ru.antisessa.CarRefuels.util.car.CarNotFoundException;
+import ru.antisessa.CarRefuels.util.refuel.RefuelNotDeletedException;
 import ru.antisessa.CarRefuels.util.refuel.RefuelNotFoundException;
+import ru.antisessa.CarRefuels.util.refuel.RefuelValidateException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,15 +47,21 @@ public class RefuelService {
     public void save(Refuel refuel){
         Optional<Car> optionalCar = carRepository.findByNameIgnoreCase(refuel.getCar().getName());
         if(optionalCar.isEmpty())
-            throw new CarNotFoundException("Машина не найдена (from validate)");
+            throw new CarNotFoundException("Машина не найдена (from refuel save)");
 
         Car foundCar = optionalCar.get();
-        validate(refuel, foundCar);
+        double calculatedConsumption = calculateAndValidate(refuel, foundCar);
+
+        refuel.setCalculatedConsumption(calculatedConsumption);
+        refuel.setPreviousConsumption(foundCar.getLastConsumption());
+        refuel.setPreviousOdometerRecord(foundCar.getOdometer());
 
         refuel.setCar(foundCar);
-        foundCar.getRefuels().add(refuel);
-        foundCar.setLastConsumption(refuel.getCalculatedConsumption());
+
+        foundCar.setLastConsumption(calculatedConsumption);
         foundCar.setOdometer(refuel.getOdometerRecord());
+        foundCar.getRefuels().add(refuel);
+        //TODO пройтись глазами по двум методам save and delete и выполнить их проверку
 
         carRepository.save(foundCar);
         refuelRepository.save(refuel);
@@ -75,25 +83,22 @@ public class RefuelService {
         Car foundCar = optionalCar.get();
         List<Refuel> refuelList = foundCar.getRefuels();
 
-        /*TODO
-           1.выполнить проверку List<Refuel> size = 1
-           2.добавить в таблицу Refuel столбец previous odometer record и previous consumption
-           таким образом при удалении единственной заправки данные на этих полях будут восстановлены
-           до момента когда пользователь регистрировал машину
-           3.После удаления заправки назначить машине эти поля
-           */
-        Refuel previousRefuel = refuelList.get(refuelList.size()-2);
+        if(refuelList.get(refuelList.size()-1).getId() != refuelToDelete.getId())
+            throw new RefuelNotDeletedException("Удалить можно только последнюю заправку");
 
-        foundCar.setLastConsumption(previousRefuel.getCalculatedConsumption());
-        foundCar.setOdometer(previousRefuel.getOdometerRecord());
-
+        foundCar.setOdometer(refuelToDelete.getPreviousOdometerRecord());
+        foundCar.setLastConsumption(refuelToDelete.getPreviousConsumption());
         foundCar.getRefuels().remove(refuelList.size()-1);
 
         refuelRepository.delete(refuelToDelete);
         carRepository.save(foundCar);
+
     }
 
-    public Refuel validate(Refuel refuel, Car car){
+    public double calculateAndValidate(Refuel refuel, Car car){
+        if(refuel.getOdometerRecord() < car.getOdometer())
+            throw new RefuelValidateException("Указанное значение спидометра меньше текущего");
+
         refuel.setDateTime(LocalDateTime.now());
 
         double distanceBefore = car.getOdometer();
@@ -107,12 +112,12 @@ public class RefuelService {
         double distanceTraveled = refuel.getOdometerRecord() - car.getOdometer();
         System.out.println("traveled distance: " + distanceTraveled);
 
-        double consumption = refuel.getVolume() / distanceTraveled * 100;
-        System.out.println("consumption: " + consumption);
+        double calculatedConsumption = refuel.getVolume() / distanceTraveled * 100;
+        System.out.println("consumption: " + calculatedConsumption);
 
         refuel.setCalculatedConsumption(refuel.getVolume() / distanceTraveled * 100);
-
-        return refuel;
+        return calculatedConsumption;
     }
+
 
 }

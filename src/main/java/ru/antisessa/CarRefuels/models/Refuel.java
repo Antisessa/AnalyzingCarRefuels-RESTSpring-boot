@@ -37,9 +37,12 @@ public class Refuel {
     @NotNull(message = "Значение цены за заправленный объем не может быть пустым")
     private double cost;
 
-    @Column(name = "odometer_record")
+    @Column(name = "current_odometer_record")
     @Min(value = 0, message = "Показание одометра должно быть положительным")
     private int odometerRecord;
+
+    @Column(name = "previous_odometer_record")
+    private int previousOdometerRecord;
 
     @Column(name = "created_at")
     private LocalDateTime dateTime;
@@ -49,6 +52,9 @@ public class Refuel {
     @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
     @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
     private double calculatedConsumption;
+
+    @Column(name = "previous_consumption")
+    private double previousConsumption;
 
     @ManyToOne
     @JoinColumn(name = "car_id", referencedColumnName = "id")
