@@ -63,8 +63,6 @@ public class RefuelService {
         // Выстраиваем обратную связь для синхронности кэша
         boundCar.getRefuels().add(refuel);
 
-        //TODO пройтись глазами по двум методам save and delete и выполнить их проверку
-
         carRepository.save(boundCar);
         refuelRepository.save(refuel);
     }
@@ -77,23 +75,29 @@ public class RefuelService {
     }
 
     @Transactional
-    public void deleteLastRefuel(Refuel refuelToDelete){
-        Optional<Car> optionalCar = carRepository.findByNameIgnoreCase(refuelToDelete.getCar().getName());
+    public void deleteLastRefuel(String carName){
+        Optional<Car> optionalCar = carRepository.findByNameIgnoreCase(carName);
         if(optionalCar.isEmpty())
             throw new CarNotFoundException("Ошибка поиска машины по заправке (from delete method)");
 
         Car foundCar = optionalCar.get();
         List<Refuel> refuelList = foundCar.getRefuels();
 
-        if(refuelList.get(refuelList.size()-1).getId() != refuelToDelete.getId())
-            throw new RefuelNotDeletedException("Удалить можно только последнюю заправку");
+        if(refuelList.isEmpty())
+            throw new RefuelNotDeletedException("Не найдено заправок у этой машины");
 
+        // Переменная для заправки которую удаляем
+        Refuel refuelToDelete = refuelList.get(refuelList.size() - 1);
+
+        // Зависимой машине назначаем поля предыдущих значений до последней заправки
         foundCar.setOdometer(refuelToDelete.getPreviousOdometerRecord());
         foundCar.setLastConsumption(refuelToDelete.getPreviousConsumption());
-        foundCar.getRefuels().remove(refuelList.size()-1);
 
-        refuelRepository.delete(refuelToDelete);
-        carRepository.save(foundCar);
+        // Выполняет синхронизацию кэшей
+        foundCar.getRefuels().remove(refuelToDelete);
+
+        refuelRepository.delete(refuelToDelete); // Удаляем запись о заправке
+        carRepository.save(foundCar); // Обновляем запись по этой машине
 
     }
 

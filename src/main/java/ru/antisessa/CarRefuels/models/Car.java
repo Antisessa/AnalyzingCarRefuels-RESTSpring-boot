@@ -2,13 +2,11 @@ package ru.antisessa.CarRefuels.models;
 
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Cascade;
-import org.hibernate.validator.constraints.UniqueElements;
 
 import javax.persistence.*;
 import javax.validation.constraints.DecimalMax;
@@ -46,7 +44,7 @@ public class Car {
     @NotNull(message = "Объем бака должен быть указан")
     @Min(value = 0, message = "Объем бака положительная величина")
     @Column(name = "gas_tank_volume")
-    private int GasTankVolume;
+    private int gasTankVolume;
 
     @OneToMany(mappedBy = "car")
     @Cascade(org.hibernate.annotations.CascadeType.SAVE_UPDATE)
@@ -60,7 +58,7 @@ public class Car {
         sb.append(", name='").append(name).append('\'');
         sb.append(", lastConsumption=").append(lastConsumption);
         sb.append(", odometer=").append(odometer);
-        sb.append(", GasTankVolume=").append(GasTankVolume);
+        sb.append(", GasTankVolume=").append(gasTankVolume);
         sb.append(", refuels=").append(refuels);
         sb.append('}');
         return sb.toString();

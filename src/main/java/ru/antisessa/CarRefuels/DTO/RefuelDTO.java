@@ -1,32 +1,121 @@
 package ru.antisessa.CarRefuels.DTO;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.Getter;
 import lombok.Setter;
 import ru.antisessa.CarRefuels.models.Car;
 
 import javax.validation.constraints.DecimalMax;
 import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 
-@Getter
-@Setter
-public class RefuelDTO {
-    private int id;
+public enum RefuelDTO {
+    ;
 
-    @NotNull(message = "Укажите объем заправленного топлива")
-    @DecimalMax(value = "99.99", message = "Значение объема должно быть меньше 100 литров")
-    @DecimalMin(value = "1.00", message = "Значение объема должно быть больше 1 литра")
-    private double volume;
+    private interface id {
+        @NotNull
+        int getId();
+    }
 
-    @NotNull(message = "Укажите сумму, потраченную на заправку")
-    private double cost;
+    private interface volume {
+        @NotNull(message = "Значение заправленного объема не может быть пустым")
+        @DecimalMax(value = "99.99", message = "Значение заправленного объема должно быть меньше 100 литров")
+        @DecimalMin(value = "1.00", message = "Значение заправленного объема должно быть больше 1 литра")
+        double getVolume();
+    }
 
-    @NotNull(message = "Запишите показания одометра")
-    private int odometerRecord;
+    private interface cost{
+        @NotNull
+        double getCost();
+    }
 
-    @NotNull(message = "Укажите идентификатор машины")
-    private String carName;
+    private interface odometerRecord {
+        @Min(value = 0, message = "Показание одометра должно быть положительным")
+        int getOdometerRecord();
+    }
+
+    private interface previousOdometerRecord {
+        @Min(value = 0, message = "Показание одометра должно быть положительным")
+        int getPreviousOdometerRecord();
+    }
+
+    private interface dateTime {
+        LocalDateTime getDateTime();
+    }
+
+    private interface calculatedConsumption {
+        @NotNull(message = "Значение среднего расхода топлива не может быть пустым")
+        @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
+        @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
+        double getCalculatedConsumption();
+    }
+
+    private interface previousConsumption {
+        @NotNull(message = "Значение среднего расхода топлива не может быть пустым")
+        @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
+        @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
+        double getPreviousConsumption();
+    }
+
+    private interface car{
+        Car getCar();
+    }
+
+    private interface carName{
+        @NotNull
+        String getCarName();
+    }
+
+    public enum Request {
+        ;
+
+        @Getter @Setter
+        public static class CreateRefuel implements volume, cost, odometerRecord, carName{
+            double volume;
+            double cost;
+            int odometerRecord;
+            String carName;
+        }
+    }
+
+    public enum Response {
+        ;
+
+        public static class T{}
+        @Getter @Setter
+        public static class DeleteLastRefuel extends T implements carName{
+            String carName;
+        }
+
+        @Getter @Setter
+        public static class GetRefuel extends DeleteLastRefuel implements id, volume, cost,
+                dateTime, calculatedConsumption{
+            int id;
+            LocalDateTime dateTime;
+            double volume;
+            double cost;
+            double calculatedConsumption;
+        }
+
+        @Getter @Setter
+        public static class GetRefuelFullInfo extends GetRefuel implements previousOdometerRecord, odometerRecord{
+            int previousOdometerRecord;
+            int odometerRecord;
+        }
+
+//        @Getter @Setter
+//        public static class GetRefuelFullInfo implements
+//                id, volume, cost, previousOdometerRecord,
+//                odometerRecord, dateTime, calculatedConsumption, carName{
+//            int id;
+//            String carName;
+//            LocalDateTime dateTime;
+//            double volume;
+//            double cost;
+//            double calculatedConsumption;
+//            int previousOdometerRecord;
+//            int odometerRecord;
+//        }
+    }
 }

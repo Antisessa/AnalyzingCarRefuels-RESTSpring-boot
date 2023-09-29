@@ -11,4 +11,6 @@ public interface RefuelRepository extends JpaRepository<Refuel, Integer> {
     Optional<Refuel> findById(int id);
     Optional<List<Refuel>> findByCar(Car car);
     Optional<Refuel> findTopByCar(Car car);
+
+    void deleteById(Integer integer);
 }
