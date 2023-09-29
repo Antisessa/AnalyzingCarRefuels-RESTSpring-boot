@@ -34,6 +34,11 @@ public class CarService {
         return foundCar.orElseThrow(CarNotFoundException::new);
     }
 
+    public Car findByNameIgnoreCase(String name){
+        Optional<Car> optionalCar = carRepository.findByNameIgnoreCase(name);
+        return optionalCar.orElseThrow(CarNotFoundException::new);
+    }
+
     ////////////// Методы для сохранения //////////////
     @Transactional
     public void save(Car car){

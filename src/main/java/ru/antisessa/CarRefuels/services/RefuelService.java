@@ -45,25 +45,27 @@ public class RefuelService {
     ////////////// Методы для сохранения //////////////
     @Transactional
     public void save(Refuel refuel){
-        Optional<Car> optionalCar = carRepository.findByNameIgnoreCase(refuel.getCar().getName());
-        if(optionalCar.isEmpty())
-            throw new CarNotFoundException("Машина не найдена (from refuel save)");
+        // В метод save приходит refuel с верной машиной внутри
+        Car boundCar = refuel.getCar();
 
-        Car foundCar = optionalCar.get();
-        double calculatedConsumption = calculateAndValidate(refuel, foundCar);
+        // Проводим валидацию и вычисляем расход по показателям заправки
+        double calculatedConsumption = calculateAndValidate(refuel, boundCar);
 
+        // Берем старые показатели из машины и присваиваем их полям refuel для возможности отката после удаления
         refuel.setCalculatedConsumption(calculatedConsumption);
-        refuel.setPreviousConsumption(foundCar.getLastConsumption());
-        refuel.setPreviousOdometerRecord(foundCar.getOdometer());
+        refuel.setPreviousConsumption(refuel.getCar().getLastConsumption());
+        refuel.setPreviousOdometerRecord(refuel.getCar().getOdometer());
 
-        refuel.setCar(foundCar);
+        // Назначаем новые поля для расхода и одометра у машины после заправки
+        boundCar.setLastConsumption(calculatedConsumption);
+        boundCar.setOdometer(refuel.getOdometerRecord());
 
-        foundCar.setLastConsumption(calculatedConsumption);
-        foundCar.setOdometer(refuel.getOdometerRecord());
-        foundCar.getRefuels().add(refuel);
+        // Выстраиваем обратную связь для синхронности кэша
+        boundCar.getRefuels().add(refuel);
+
         //TODO пройтись глазами по двум методам save and delete и выполнить их проверку
 
-        carRepository.save(foundCar);
+        carRepository.save(boundCar);
         refuelRepository.save(refuel);
     }
 
@@ -97,7 +99,7 @@ public class RefuelService {
 
     public double calculateAndValidate(Refuel refuel, Car car){
         if(refuel.getOdometerRecord() < car.getOdometer())
-            throw new RefuelValidateException("Указанное значение спидометра меньше текущего");
+            throw new RefuelValidateException("Указанное значение спидометра после заправки меньше последнего показателя у машины");
 
         refuel.setDateTime(LocalDateTime.now());
 
@@ -112,10 +114,9 @@ public class RefuelService {
         double distanceTraveled = refuel.getOdometerRecord() - car.getOdometer();
         System.out.println("traveled distance: " + distanceTraveled);
 
+        // volume / distance * 100
         double calculatedConsumption = refuel.getVolume() / distanceTraveled * 100;
         System.out.println("consumption: " + calculatedConsumption);
-
-        refuel.setCalculatedConsumption(refuel.getVolume() / distanceTraveled * 100);
         return calculatedConsumption;
     }
 

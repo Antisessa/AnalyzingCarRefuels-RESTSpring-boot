@@ -8,7 +8,9 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 import ru.antisessa.CarRefuels.DTO.RefuelDTO;
+import ru.antisessa.CarRefuels.models.Car;
 import ru.antisessa.CarRefuels.models.Refuel;
+import ru.antisessa.CarRefuels.services.CarService;
 import ru.antisessa.CarRefuels.services.RefuelService;
 import ru.antisessa.CarRefuels.util.refuel.RefuelErrorResponse;
 import ru.antisessa.CarRefuels.util.refuel.RefuelNotCreatedException;
@@ -16,17 +18,20 @@ import ru.antisessa.CarRefuels.util.refuel.RefuelNotFoundException;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController //@Controller + @ResponseBody над каждым методом для Jackson
 @RequestMapping("/acr/refuel")
 public class RefuelController {
     private final RefuelService refuelService;
+    private final CarService carService;
     private final ModelMapper modelMapper;
 
     @Autowired
-    public RefuelController(RefuelService refuelService, ModelMapper modelMapper) {
+    public RefuelController(RefuelService refuelService, CarService carService, ModelMapper modelMapper) {
         this.refuelService = refuelService;
+        this.carService = carService;
         this.modelMapper = modelMapper;
     }
 
@@ -56,6 +61,7 @@ public class RefuelController {
             List<FieldError> errors = bindingResult.getFieldErrors();
             throw new RefuelNotCreatedException(errorMessageBuilder(errors));
         }
+        //В метод save передаем refuel с верно вложенным объектом car
         refuelService.save(convertToRefuel(refuelDTO));
         return ResponseEntity.ok(HttpStatus.OK);
     }
@@ -76,7 +82,10 @@ public class RefuelController {
     }
 
     private Refuel convertToRefuel(RefuelDTO refuelDTO){
-        return modelMapper.map(refuelDTO, Refuel.class);
+        Refuel refuel = modelMapper.map(refuelDTO, Refuel.class);
+        Car foundCar = carService.findByNameIgnoreCase(refuelDTO.getCarName());
+        refuel.setCar(foundCar);
+        return refuel;
     }
 
     private String errorMessageBuilder(List<FieldError> errors){
