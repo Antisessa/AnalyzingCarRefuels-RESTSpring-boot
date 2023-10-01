@@ -32,8 +32,8 @@ public class Car {
     private String name;
 
     @NotNull(message = "Значение среднего расхода топлива не может быть пустым")
-    @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
-    @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
+    @DecimalMax(value = "99.99", message = "Проверьте данные, значение расхода должно быть меньше 100 литров")
+    @DecimalMin(value = "1.00", message = "Проверьте данные, значение расхода должно быть больше 1 литра")
     @Column(name = "consumption")
     private double lastConsumption;
 

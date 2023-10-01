@@ -3,6 +3,8 @@ package ru.antisessa.CarRefuels.DTO;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
+import org.modelmapper.internal.bytebuddy.implementation.bind.annotation.Default;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import ru.antisessa.CarRefuels.models.Refuel;
 
 import javax.validation.constraints.DecimalMax;
@@ -24,47 +26,55 @@ public enum CarDTO {
     ;
 
     private interface id {
-        @NotNull
+        @NotNull(message = "ID машины не должен быть пустым 'DTO message'")
         int getId();
     }
     private interface name {
-        @NotNull
+        @NotNull(message = "Идентификатор машины не должен быть пустым 'DTO message'")
         String getName();
     }
     private interface lastConsumption {
-        @NotNull(message = "Значение среднего расхода топлива не может быть пустым")
-        @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
-        @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
         double getLastConsumption();
     }
     private interface odometer {
-        @Min(value = 0, message = "Показание одометра должно быть положительным")
+        @Min(value = 1, message = "Показание одометра должно быть положительным 'DTO message'")
         int getOdometer();
     }
     private interface gasTankVolume {
-        @NotNull(message = "Объем бака должен быть указан")
-        @Min(value = 0, message = "Объем бака положительная величина")
+        @NotNull(message = "Объем бака должен быть указан 'DTO message'")
+        @Min(value = 1, message = "Объем бака положительная величина 'DTO message'")
         int getGasTankVolume();
-    }
-    private interface car_name {
-        String getCar_name();
     }
 
     private interface refuels {
         @JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "jackson_id")
-        List<Refuel> getRefuels();
+        List<RefuelDTO.Response.GetRefuel> getRefuels();
+    }
+
+    private interface countRefuels {
+        int getCountRefuels();
     }
 
     //Enums Requests для CarController
     public enum Request {
         ; // Пустой enum
 
+        @Getter @Setter
+        public static class DeleteCar implements name {
+            String name;
+        }
 
         @Getter @Setter
-        public static class CreateCar implements name, odometer, gasTankVolume {
+        public static class UpdateCar extends DeleteCar implements id{
+            int id;
+        }
+
+        @Getter @Setter
+        public static class CreateCar extends DeleteCar implements odometer, gasTankVolume, lastConsumption {
             String name;
             int odometer;
             int gasTankVolume;
+            double lastConsumption;
         }
     }
 
@@ -72,14 +82,21 @@ public enum CarDTO {
         ; // Пустой enum
 
         @Getter @Setter
-        public static class GetCar implements name, odometer, gasTankVolume{
+        public static class GetCar implements name, odometer, gasTankVolume, countRefuels{
             String name;
             int odometer;
             int gasTankVolume;
+            int countRefuels;
+
+        }
+
+        @Getter @Setter
+        public static class GetCarFullInfo extends GetCar implements id, refuels{
+
+            int id;
 
             @JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "jackson_id")
-            List<RefuelDTO_deprecated> refuels;
-
+            List<RefuelDTO.Response.GetRefuel> refuels;
         }
     }
 }

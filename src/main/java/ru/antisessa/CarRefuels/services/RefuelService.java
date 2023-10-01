@@ -102,8 +102,8 @@ public class RefuelService {
     }
 
     public double calculateAndValidate(Refuel refuel, Car car){
-        if(refuel.getOdometerRecord() < car.getOdometer())
-            throw new RefuelValidateException("Указанное значение спидометра после заправки меньше последнего показателя у машины");
+        if(refuel.getOdometerRecord() <= car.getOdometer())
+            throw new RefuelValidateException("Значение спидометра после заправки должно быть больше последнего показателя у машины");
 
         refuel.setDateTime(LocalDateTime.now());
 

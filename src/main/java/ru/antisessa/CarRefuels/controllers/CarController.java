@@ -7,23 +7,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
-import ru.antisessa.CarRefuels.DTO.CarDTO_deprecated;
 import ru.antisessa.CarRefuels.DTO.CarDTO;
-import ru.antisessa.CarRefuels.DTO.RefuelDTO_deprecated;
+import ru.antisessa.CarRefuels.DTO.RefuelDTO;
 import ru.antisessa.CarRefuels.models.Car;
 import ru.antisessa.CarRefuels.models.Refuel;
 import ru.antisessa.CarRefuels.services.CarService;
-import ru.antisessa.CarRefuels.util.car.CarAlreadyCreatedException;
-import ru.antisessa.CarRefuels.util.car.CarErrorResponse;
-import ru.antisessa.CarRefuels.util.car.CarNotCreatedException;
-import ru.antisessa.CarRefuels.util.car.CarNotFoundException;
+import ru.antisessa.CarRefuels.util.car.*;
 
 import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController // @Controller + @ResponseBody над каждым методом для Jackson
-@RequestMapping("/acr")
+@RequestMapping("/acr/cars")
 public class CarController {
     private final CarService carService;
     private final ModelMapper modelMapper;
@@ -34,48 +30,75 @@ public class CarController {
         this.modelMapper = modelMapper;
     }
 
-    @GetMapping("/car/hello")
+    @GetMapping("hello")
     public String sayHello() {
         return "Hello from ACR app - cars controller";
     }
 
     ////////////////// GET End-points //////////////////
     // Найти все машины
-    @GetMapping("/cars")
+    @GetMapping()
     public List<CarDTO.Response.GetCar> allCars(){
         return carService.findAll().stream()
                 .map(this::carToDTO).collect(Collectors.toList());
     }
 
-    // Найти машину по ID
-    @GetMapping("/cars/{id}")
+    @GetMapping("/full")
+    public List<CarDTO.Response.GetCarFullInfo> allCarsFullInfo(){
+        return carService.findAll().stream()
+                .map(this::carToDTOFullInfo).collect(Collectors.toList());
+    }
+
+    // Найти машину с краткими данными по ID
+    @GetMapping("/{id}")
     public CarDTO.Response.GetCar findOneById(@PathVariable("id") int id){
         return carToDTO(carService.findOne(id));
     }
 
-//    //Найти машину по ID
-//    @GetMapping("/cars/{id}/full")
-//    public CarDTO.Response.GetCar findOneByIdFullInfo(@PathVariable("id") int id){
-//        return carToDTO(carService.findOne(id));
-//    }
+    //Найти машину со всеми данными по ID
+    @GetMapping("{id}/full")
+    public CarDTO.Response.GetCarFullInfo findOneByIdFullInfo(@PathVariable("id") int id){
+        return carToDTOFullInfo(carService.findOne(id));
+    }
 
     ////////////////// POST End-points //////////////////
     // Регистрация машины
-    @PostMapping("/cars/registration")
-    public ResponseEntity<HttpStatus> create(@RequestBody @Valid CarDTO_deprecated carDTODeprecated,
+    @PostMapping("/registration")
+    public ResponseEntity<HttpStatus> create(@RequestBody @Valid CarDTO.Request.CreateCar request,
                                              BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             List<FieldError> errors = bindingResult.getFieldErrors();
             throw new CarNotCreatedException(errorMessageBuilder(errors));
           }
-        carService.save(convertToCar(carDTODeprecated));
+        carService.save(convertToCar(request));
         return ResponseEntity.ok(HttpStatus.OK);
         }
 
     ////////////////// UPDATE End-points //////////////////
-            // TODO написать метод для обновления машины
+
+    @PatchMapping("/update")
+    public ResponseEntity<HttpStatus> update(@RequestBody @Valid CarDTO.Request.UpdateCar request,
+                                             BindingResult bindingResult){
+        if (bindingResult.hasErrors()) {
+            List<FieldError> errors = bindingResult.getFieldErrors();
+            throw new CarNotUpdatedException(errorMessageBuilder(errors));
+        }
+
+        carService.updateCar(convertToCar(request));
+        return ResponseEntity.ok(HttpStatus.OK);
+    }
+
     ////////////////// DELETE End-points //////////////////
-            // TODO написать метод для удаления машины
+    @DeleteMapping("/delete")
+    public ResponseEntity<HttpStatus> delete(@RequestBody @Valid CarDTO.Request.DeleteCar request,
+                                             BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            List<FieldError> errors = bindingResult.getFieldErrors();
+            throw new CarNotCreatedException(errorMessageBuilder(errors));
+        }
+        carService.delete(request.getName());
+        return ResponseEntity.ok(HttpStatus.OK);
+    }
 
 
     // Обработка NotFound для метода findOneById
@@ -103,33 +126,55 @@ public class CarController {
     }
 
 
-    //////////// Utility ////////////
+    /////// Code Block for convert Model to DTO ///////
+    // Convert Car to GetCar
     private CarDTO.Response.GetCar carToDTO(Car car) {
-        CarDTO.Response.GetCar test = modelMapper.map(car, CarDTO.Response.GetCar.class);
+        CarDTO.Response.GetCar getCar = modelMapper.map(car, CarDTO.Response.GetCar.class);
 
-        test.setRefuels(car.getRefuels().stream()
+        getCar.setCountRefuels(car.getRefuels().size());
+
+        return getCar;
+    }
+
+    // Convert Car to GetCarFullInfo
+    private CarDTO.Response.GetCarFullInfo carToDTOFullInfo(Car car) {
+        CarDTO.Response.GetCarFullInfo getCar = modelMapper.map(car, CarDTO.Response.GetCarFullInfo.class);
+
+        getCar.setCountRefuels(car.getRefuels().size());
+
+        getCar.setRefuels(car.getRefuels().stream()
                 .map(this::refuelToDTO).collect(Collectors.toList()));
 
-        return test;
+        return getCar;
     }
 
-    private RefuelDTO_deprecated refuelToDTO(Refuel refuel) {
-        RefuelDTO_deprecated refuelDTODeprecated = modelMapper.map(refuel, RefuelDTO_deprecated.class);
-        refuelDTODeprecated.setCarName(refuel.getCar().getName());
-        return refuelDTODeprecated;
+    // Convert Refuel to GetRefuel
+    private RefuelDTO.Response.GetRefuel refuelToDTO(Refuel refuel) {
+        return modelMapper.map(refuel, RefuelDTO.Response.GetRefuel.class);
     }
 
-    private Car convertToCar(CarDTO_deprecated carDTODeprecated){
-        Car mappedCar = modelMapper.map(carDTODeprecated, Car.class);
-        mappedCar.setLastConsumption(1.01);
-        return mappedCar;
+
+
+
+    /////// Code Block for convert DTO to Model ///////
+    //  Convert CreateCar to Car
+    private Car convertToCar(CarDTO.Request.CreateCar createCar){
+        return modelMapper.map(createCar, Car.class);
     }
+
+    // Convert UpdateCar to Car
+    private Car convertToCar(CarDTO.Request.UpdateCar updateCar){
+        return modelMapper.map(updateCar, Car.class);
+    }
+
+
+
 
     private String errorMessageBuilder(List<FieldError> errors){
         StringBuilder errorMsg = new StringBuilder();
         for (FieldError error : errors) {
             errorMsg.append(error.getField()).append(" - ")
-                    .append(error.getDefaultMessage()).append(";");
+                    .append(error.getDefaultMessage()).append("; ");
         }
         return errorMsg.toString();
     }

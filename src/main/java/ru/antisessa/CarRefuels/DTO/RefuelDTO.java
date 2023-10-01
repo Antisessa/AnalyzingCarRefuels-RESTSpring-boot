@@ -71,7 +71,9 @@ public enum RefuelDTO {
         ;
 
         @Getter @Setter
-        public static class CreateRefuel implements volume, cost, odometerRecord, carName{
+        public static class CreateRefuel implements
+                volume, cost, odometerRecord, carName{
+
             double volume;
             double cost;
             int odometerRecord;
@@ -89,8 +91,9 @@ public enum RefuelDTO {
         }
 
         @Getter @Setter
-        public static class GetRefuel extends DeleteLastRefuel implements id, volume, cost,
-                dateTime, calculatedConsumption{
+        public static class GetRefuel extends DeleteLastRefuel implements
+                id, volume, cost, dateTime, calculatedConsumption{
+
             int id;
             LocalDateTime dateTime;
             double volume;
@@ -99,7 +102,9 @@ public enum RefuelDTO {
         }
 
         @Getter @Setter
-        public static class GetRefuelFullInfo extends GetRefuel implements previousOdometerRecord, odometerRecord{
+        public static class GetRefuelFullInfo extends GetRefuel implements
+                previousOdometerRecord, odometerRecord{
+
             int previousOdometerRecord;
             int odometerRecord;
         }

@@ -2,14 +2,11 @@ package ru.antisessa.CarRefuels.controllers;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
-import ru.antisessa.CarRefuels.DTO.CarDTO;
-import ru.antisessa.CarRefuels.DTO.RefuelDTO_deprecated;
 import ru.antisessa.CarRefuels.DTO.RefuelDTO;
 import ru.antisessa.CarRefuels.models.Car;
 import ru.antisessa.CarRefuels.models.Refuel;
@@ -17,10 +14,7 @@ import ru.antisessa.CarRefuels.services.CarService;
 import ru.antisessa.CarRefuels.services.RefuelService;
 import ru.antisessa.CarRefuels.util.car.CarErrorResponse;
 import ru.antisessa.CarRefuels.util.car.CarNotFoundException;
-import ru.antisessa.CarRefuels.util.refuel.RefuelErrorResponse;
-import ru.antisessa.CarRefuels.util.refuel.RefuelNotCreatedException;
-import ru.antisessa.CarRefuels.util.refuel.RefuelNotDeletedException;
-import ru.antisessa.CarRefuels.util.refuel.RefuelNotFoundException;
+import ru.antisessa.CarRefuels.util.refuel.*;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -74,15 +68,17 @@ public class RefuelController {
     ////////////////// POST End-points //////////////////
     // Регистрация заправки
     @PostMapping("/add")
-    public ResponseEntity<HttpStatus> create(@RequestBody @Valid RefuelDTO_deprecated refuelDTODeprecated,
+    public ResponseEntity<HttpStatus> create(@RequestBody @Valid RefuelDTO.Request.CreateRefuel request,
                                              BindingResult bindingResult){
         if (bindingResult.hasErrors()) {
             List<FieldError> errors = bindingResult.getFieldErrors();
             throw new RefuelNotCreatedException(errorMessageBuilder(errors));
         }
+
         //В метод save передаем refuel с верно вложенным объектом car
-        refuelService.save(convertToRefuel(refuelDTODeprecated));
+        refuelService.save(convertToRefuel(request));
         return ResponseEntity.ok(HttpStatus.OK);
+        // TODO внутри ResponseEntity добавить информационные поля по добавленной заправке
     }
 
     ////////////////// UPDATE End-points //////////////////
@@ -90,7 +86,8 @@ public class RefuelController {
 
 
     ////////////////// DELETE End-points //////////////////
-    //Удаление заправки
+
+    //Удаление последней заправки
     @DeleteMapping("/delete")
     public ResponseEntity<HttpStatus> deleteLastRefuel(@RequestBody @Valid RefuelDTO.Response.DeleteLastRefuel response,
                                                        BindingResult bindingResult){
@@ -128,28 +125,42 @@ public class RefuelController {
         return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
-    //////////// Utility ////////////
-//    private RefuelDTO.Response.GetRefuel convertToDTO(Refuel refuel) {
-//        RefuelDTO.Response.GetRefuel refuelDTO = modelMapper.map(refuel, RefuelDTO.Response.GetRefuel.class);
-//        refuelDTO.setCarName(refuel.getCar().getName());
-//        return refuelDTO;
-//    }
+    // Обработка RefuelValidate для метода create
+    @ExceptionHandler
+    private ResponseEntity<RefuelErrorResponse> handleException(RefuelValidateException e){
+        RefuelErrorResponse response = new RefuelErrorResponse(e.getMessage(), System.currentTimeMillis());
 
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    // Обработка RefuelNotCreated для метода create
+    @ExceptionHandler
+    private ResponseEntity<RefuelErrorResponse> handleException(RefuelNotCreatedException e){
+        RefuelErrorResponse response = new RefuelErrorResponse(e.getMessage(), System.currentTimeMillis());
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    ////////////////// Utility //////////////////
+
+    // Convert GetRefuel to Refuel
     private RefuelDTO.Response.GetRefuel convertToDTO(Refuel refuel) {
         RefuelDTO.Response.GetRefuel refuelDTO = modelMapper.map(refuel, RefuelDTO.Response.GetRefuel.class);
         refuelDTO.setCarName(refuel.getCar().getName());
         return refuelDTO;
-    } //TODO Правильно параметризовать методы чтобы не было повторяющегося кода
+    }
 
+    // Convert GetRefuelFullInfo to Refuel
     private RefuelDTO.Response.GetRefuelFullInfo convertToDTOFullInfo(Refuel refuel) {
         RefuelDTO.Response.GetRefuelFullInfo refuelDTO = modelMapper.map(refuel, RefuelDTO.Response.GetRefuelFullInfo.class);
         refuelDTO.setCarName(refuel.getCar().getName());
         return refuelDTO;
     }
 
-    private Refuel convertToRefuel(RefuelDTO_deprecated refuelDTODeprecated){
-        Refuel refuel = modelMapper.map(refuelDTODeprecated, Refuel.class);
-        Car foundCar = carService.findByNameIgnoreCase(refuelDTODeprecated.getCarName());
+    // Convert CreateRefuel to Refuel
+    private Refuel convertToRefuel(RefuelDTO.Request.CreateRefuel request){
+        Refuel refuel = modelMapper.map(request, Refuel.class);
+        Car foundCar = carService.findByNameIgnoreCase(request.getCarName());
         refuel.setCar(foundCar);
         return refuel;
     }
