@@ -71,6 +71,16 @@ public enum RefuelDTO {
         ;
 
         @Getter @Setter
+        public static class UpdateRefuel implements
+                volume, cost, odometerRecord, carName{
+
+            double volume;
+            double cost;
+            int odometerRecord;
+            String carName;
+        }
+
+        @Getter @Setter
         public static class CreateRefuel implements
                 volume, cost, odometerRecord, carName{
 

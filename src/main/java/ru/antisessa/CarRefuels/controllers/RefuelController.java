@@ -40,26 +40,26 @@ public class RefuelController {
     }
 
     ////////////////// GET End-points //////////////////
-    // Найти все записи о заправках
+    // Найти все записи о заправках с их краткими данными
     @GetMapping()
     public List<RefuelDTO.Response.GetRefuel> allRefuel(){
         return refuelService.findAll().stream().
                 map(this::convertToDTO).collect(Collectors.toList());
     }
-    // Найти все записи о заправках с полной информацией
+    // Найти все записи о заправках с их полными данными
     @GetMapping("/full")
     public List<RefuelDTO.Response.GetRefuelFullInfo> allRefuelFullInfo(){
         return refuelService.findAll().stream().
                 map(this::convertToDTOFullInfo).collect(Collectors.toList());
     }
 
-    // Найти DTO заправку по ID
+    // Найти заправку по ID
     @GetMapping("/{id}")
     public RefuelDTO.Response.GetRefuel findOneById(@PathVariable("id") int id){
         return convertToDTO(refuelService.findOne(id));
     }
 
-    // Найти DTO заправку по ID c полной информацией
+    // Найти заправку по ID c полной информацией
     @GetMapping("/{id}/full")
     public RefuelDTO.Response.GetRefuelFullInfo findOneByIdFullInfo(@PathVariable("id") int id){
         return convertToDTOFullInfo(refuelService.findOne(id));
@@ -78,11 +78,22 @@ public class RefuelController {
         //В метод save передаем refuel с верно вложенным объектом car
         refuelService.save(convertToRefuel(request));
         return ResponseEntity.ok(HttpStatus.OK);
-        // TODO внутри ResponseEntity добавить информационные поля по добавленной заправке
+        // TODO внутри ответа ResponseEntity добавить информационные поля по добавленной заправке
     }
 
     ////////////////// UPDATE End-points //////////////////
-    // TODO написать метод для обновления машины
+    @PatchMapping("/update")
+    public ResponseEntity<HttpStatus> updateLastRefuel(@RequestBody @Valid RefuelDTO.Request.UpdateRefuel request,
+                                                       BindingResult bindingResult){
+        if (bindingResult.hasErrors()) {
+            List<FieldError> errors = bindingResult.getFieldErrors();
+            throw new RefuelNotUpdatedException(errorMessageBuilder(errors));
+        }
+
+        // В метод update передаем
+        refuelService.updateLastRefuel(convertToRefuel(request));
+        return ResponseEntity.ok(HttpStatus.OK);
+    }
 
 
     ////////////////// DELETE End-points //////////////////
@@ -98,6 +109,7 @@ public class RefuelController {
 
         refuelService.deleteLastRefuel(response.getCarName());
         return ResponseEntity.ok(HttpStatus.OK);
+        // TODO внутри ответа ResponseEntity добавить информационные поля по текущей последней заправке у машины
     }
 
     // Обработка NotFoundRefuel для метода findOneById
@@ -159,6 +171,14 @@ public class RefuelController {
 
     // Convert CreateRefuel to Refuel
     private Refuel convertToRefuel(RefuelDTO.Request.CreateRefuel request){
+        Refuel refuel = modelMapper.map(request, Refuel.class);
+        Car foundCar = carService.findByNameIgnoreCase(request.getCarName());
+        refuel.setCar(foundCar);
+        return refuel;
+    }
+
+    // Convert UpdateRefuel to Refuel
+    private Refuel convertToRefuel(RefuelDTO.Request.UpdateRefuel request){
         Refuel refuel = modelMapper.map(request, Refuel.class);
         Car foundCar = carService.findByNameIgnoreCase(request.getCarName());
         refuel.setCar(foundCar);

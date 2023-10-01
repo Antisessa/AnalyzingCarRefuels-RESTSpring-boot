@@ -69,9 +69,26 @@ public class RefuelService {
 
     ////////////// Методы для обновления //////////////
     @Transactional
-    public void updateLastRefuel(Refuel updatedRefuel, int previousId){
-        updatedRefuel.setId(previousId);
-        refuelRepository.save(updatedRefuel);
+    public void updateLastRefuel(Refuel updatedRefuel){
+        // В метод приходит Refuel с верно вложенной машиной
+
+        Car boundCar = updatedRefuel.getCar();
+        Refuel lastRefuel = boundCar.getRefuels().get(boundCar.getRefuels().size() - 1);
+
+        boundCar.setOdometer(lastRefuel.getPreviousOdometerRecord());
+        boundCar.setLastConsumption(lastRefuel.getPreviousConsumption());
+
+        // Удаляем старую заправку из БД
+        refuelRepository.delete(lastRefuel);
+
+        //Удаляем старую заправку у машины для синхронности кэша
+        boundCar.getRefuels().remove(lastRefuel);
+
+        // Обновляем машину в БД
+        carRepository.save(boundCar);
+
+        // Вызываем метод для записи новой заправки, передаем туда обновленную заправку
+        save(updatedRefuel);
     }
 
     @Transactional
