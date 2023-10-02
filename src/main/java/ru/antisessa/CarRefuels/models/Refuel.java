@@ -1,7 +1,6 @@
 package ru.antisessa.CarRefuels.models;
 
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.Getter;
@@ -49,12 +48,15 @@ public class Refuel {
 
     @Column(name = "consumption")
 //    @NotNull(message = "Значение среднего расхода топлива не может быть пустым")
-    @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
-    @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
+//    @DecimalMax(value = "99.99", message = "Значение должно быть меньше 100 литров")
+//    @DecimalMin(value = "1.00", message = "Значение должно быть больше 1 литра")
     private double calculatedConsumption;
 
     @Column(name = "previous_consumption")
     private double previousConsumption;
+
+    @Column(name = "full_tank_refuel")
+    private boolean fullTankRefuel;
 
     @ManyToOne
     @JoinColumn(name = "car_id", referencedColumnName = "id")

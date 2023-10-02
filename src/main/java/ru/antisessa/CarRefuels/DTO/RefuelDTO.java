@@ -58,6 +58,11 @@ public enum RefuelDTO {
         double getPreviousConsumption();
     }
 
+    private interface fullTankRefuel{
+        @NotNull(message = "Укажите, заправка была до полного бака или нет")
+        boolean getFullTankRefuel();
+    }
+
     private interface car{
         Car getCar();
     }
@@ -72,22 +77,21 @@ public enum RefuelDTO {
 
         @Getter @Setter
         public static class UpdateRefuel implements
-                volume, cost, odometerRecord, carName{
-
+                volume, cost, odometerRecord, fullTankRefuel, carName{
             double volume;
             double cost;
             int odometerRecord;
+            boolean fullTankRefuel;
             String carName;
+
+            @Override
+            public boolean getFullTankRefuel() {
+                return fullTankRefuel;
+            }
         }
 
         @Getter @Setter
-        public static class CreateRefuel implements
-                volume, cost, odometerRecord, carName{
-
-            double volume;
-            double cost;
-            int odometerRecord;
-            String carName;
+        public static class CreateRefuel extends UpdateRefuel{
         }
     }
 
