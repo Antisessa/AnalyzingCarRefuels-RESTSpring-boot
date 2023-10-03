@@ -60,7 +60,7 @@ public enum RefuelDTO {
 
     private interface fullTankRefuel{
         @NotNull(message = "Укажите, заправка была до полного бака или нет")
-        boolean getFullTankRefuel();
+        boolean isFullTankRefuel();
     }
 
     private interface car{
@@ -83,11 +83,6 @@ public enum RefuelDTO {
             int odometerRecord;
             boolean fullTankRefuel;
             String carName;
-
-            @Override
-            public boolean getFullTankRefuel() {
-                return fullTankRefuel;
-            }
         }
 
         @Getter @Setter

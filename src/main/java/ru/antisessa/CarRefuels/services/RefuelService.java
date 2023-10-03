@@ -15,6 +15,7 @@ import ru.antisessa.CarRefuels.util.refuel.RefuelValidateException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RefuelService {
@@ -51,23 +52,38 @@ public class RefuelService {
         // Проводим валидацию и вычисляем расход по показателям заправки
         double calculatedConsumption = calculateAndValidate(refuel, boundCar);
 
-
         // Берем старые показатели из машины и присваиваем их полям refuel для возможности отката после удаления
         refuel.setPreviousConsumption(refuel.getCar().getLastConsumption());
         refuel.setPreviousOdometerRecord(refuel.getCar().getOdometer());
 
-        // Назначаем новые поля для расхода и одометра у машины после заправки
+        // Назначаем новые поля для одометра у машины после заправки
         boundCar.setOdometer(refuel.getOdometerRecord());
 
-        // Если заправка была до полного бака, то добавляем значения расхода для заправки
-        // и записываем новое значение расхода для машины
-        if(refuel.isFullTankRefuel()){
-        refuel.setCalculatedConsumption(calculatedConsumption);
-        boundCar.setLastConsumption(calculatedConsumption);
-        }
+        // Если заправка до полного бака, то добавляем ей значение вычисленного расхода
+        if(refuel.isFullTankRefuel())
+            refuel.setCalculatedConsumption(calculatedConsumption);
 
-        // Выстраиваем обратную связь для синхронности кэша
+        // Выстраиваем обратную связь для синхронности кэша + расчета последующего среднего расхода
         boundCar.getRefuels().add(refuel);
+
+        // Если заправка была до полного бака, то нужно обновить средний расход у машины
+        if(refuel.isFullTankRefuel()){
+            List<Refuel> fullRefuels =
+                    boundCar.getRefuels().stream()
+                            .filter(a -> a.getCalculatedConsumption() > 0)
+                            .collect(Collectors.toList());
+
+            //Вводим переменную аккумулятор
+            double consumptionSum = 0;
+
+            for (Refuel refuelIterator : fullRefuels )
+                consumptionSum+= refuelIterator.getCalculatedConsumption();
+
+            System.out.println("Количество полных заправок: " + fullRefuels.size());
+            System.out.println("Вычисленная сумма всех значений расходов: " + consumptionSum);
+            System.out.println("Вычисленное значение среднего расхода: " + consumptionSum / fullRefuels.size());
+            boundCar.setLastConsumption(consumptionSum / fullRefuels.size());
+        }
 
         carRepository.save(boundCar);
         refuelRepository.save(refuel);
@@ -136,7 +152,9 @@ public class RefuelService {
         //Если заправка ДО полного бака
         if (refuel.isFullTankRefuel()){
             // инициализируем счетчик для пройденных километров и заправленных литров
+            System.out.println("Добавляем заправку до полного бака");
             int reachedKm = refuel.getOdometerRecord() - car.getOdometer();
+            System.out.println("Пройдено км с последней заправки: " + reachedKm);
             double filledVolume = refuel.getVolume();
 
             // Проходимся по всему списку заправок с конца - [0, 1, 2]
@@ -146,6 +164,8 @@ public class RefuelService {
 
                 //Как только найдется заправка до полного бака - выходим из цикла
                 if(refuelIterator.isFullTankRefuel()) {
+                    System.out.println("Пройдено км с последней полной заправки: " + reachedKm);
+                    System.out.println("Заправлено литров с последней полной заправки: " + filledVolume);
                     break;
                 }
                 //Если итератор не является заправкой до полного бака, то добавляем значения к счетчику
@@ -158,23 +178,6 @@ public class RefuelService {
 
         //Если заправка НЕ до полного бака, то просто возвращаем предыдущий расход
         return car.getLastConsumption();
-
-//        double distanceBefore = car.getOdometer();
-//        System.out.println("km before: " + distanceBefore);
-//
-//        double distanceAfter = refuel.getOdometerRecord();
-//        System.out.println("km after: " + distanceAfter);
-//
-//        System.out.println("volume: " + refuel.getVolume());
-//
-//        double distanceTraveled = refuel.getOdometerRecord() - car.getOdometer();
-//        System.out.println("traveled distance: " + distanceTraveled);
-//
-//        // volume / distance * 100
-//        double calculatedConsumption = refuel.getVolume() / distanceTraveled * 100;
-//        System.out.println("consumption: " + calculatedConsumption);
-
-//        return calculatedConsumption;
     }
 
 
